@@ -116,4 +116,7 @@ Punya ide untuk membuat なつServer menjadi lebih baik? *Pull Requests* sangat 
 
 ## 📝 Lisensi
 
-Proyek ini didistribusikan di bawah lisensi **MIT License**. Gratis sepenuhnya untuk digunakan pada proyek personal maupun komersial (*freelance*). Bebas tanpa syarat!
+Proyek ini berada di bawah lisensi **MIT License**.
+Artinya, perangkat lunak ini bebas dan gratis sepenuhnya untuk digunakan pada proyek personal maupun komersial, dimodifikasi, serta didistribusikan ulang, dengan syarat tetap menyertakan atribusi lisensi asli. 
+
+Lihat file [LICENSE](LICENSE) untuk informasi hukum selengkapnya.
