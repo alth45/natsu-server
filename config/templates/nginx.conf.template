@@ -1,0 +1,41 @@
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    # REVISI: Beri tahu Nginx lokasi file mime.types yang benar
+    include       "{BASE_DIR}/bin/nginx/conf/mime.types";
+    default_type  application/octet-stream;
+    sendfile      on;
+    keepalive_timeout  65;
+
+    # Set log error ke folder logs kita
+    error_log "{BASE_DIR}/logs/nginx_error.log";
+    access_log "{BASE_DIR}/logs/nginx_access.log";
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+        # Arahkan document root ke folder www kita
+        root         "{BASE_DIR}/www";
+        index        index.php index.html index.htm;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+
+        # Arahkan script PHP ke PHP-CGI di port 9000
+        location ~ \.php$ {
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            # REVISI: Beri tahu Nginx lokasi file fastcgi_params yang benar
+            include        "{BASE_DIR}/bin/nginx/conf/fastcgi_params";
+        }
+    }
+
+    include "{BASE_DIR}/config/vhosts/*.conf";
+}

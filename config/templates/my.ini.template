@@ -1,0 +1,14 @@
+[mysqld]
+port=3306
+bind-address=127.0.0.1
+
+# Arahkan penyimpanan database ke folder data/mysql kita
+datadir="{BASE_DIR}/data/mysql"
+
+# Arahkan log error ke folder logs
+log-error="{BASE_DIR}/logs/mysql_error.log"
+
+# Seting standar tambahan
+character-set-server=utf8mb4
+collation-server=utf8mb4_general_ci
+default-storage-engine=INNODB

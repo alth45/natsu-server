@@ -1,0 +1,15 @@
+# Mengabaikan folder engine dan data berat
+/bin/
+/data/
+/logs/
+/www/
+/config/vhosts/
+
+# Mengabaikan file hasil kompilasi PyInstaller
+/app/build/
+/app/dist/
+*.spec
+__pycache__/
+
+# Mengabaikan file executable
+*.exe
