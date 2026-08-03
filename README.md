@@ -80,6 +80,18 @@ Jika kamu ingin ikut mengembangkan aplikasi GUI ini:
 
 1. *Clone* repositori ini: `git clone https://github.com/username/natsu-server.git`
 2. Unduh manual *engine* Nginx, PHP, MariaDB, dan letakkan ke dalam folder `/bin/` sesuai struktur direktori.
+Download Bahan Engine (Wajib Versi Portable/ZIP):
+Unduh semua bahan di bawah ini dan ekstrak ke dalam folder /bin/ sesuai dengan nama foldernya.
+
+| Komponen | Deskripsi | Link Unduhan | Target Ekstrak |
+|---|---|---|---|
+| **Nginx** | Web Server | [Nginx for Windows (ZIP)](https://nginx.org/en/download.html) | `/bin/nginx/` |
+| **PHP** | PHP 8.x Thread Safe | [PHP 8.x TS (ZIP)](https://windows.php.net/download/) | `/bin/php/` |
+| **MariaDB** | Database | [MariaDB Windows (ZIP)](https://mariadb.org/download/?t=mariadb&p=mariadb&r=11.4.5&os=windows&cpu=x86_64&pkg=zip) | `/bin/mysql/` |
+| **HeidiSQL** | DB Manager | [HeidiSQL Portable (ZIP)](https://www.heidisql.com/download.php?download=portable-64) | `/bin/heidisql/` |
+| **Ngrok** | Live Share | [Ngrok for Windows (ZIP)](https://ngrok.com/download) | `/bin/ngrok/` |
+| **Composer** | Laravel Installer | [composer.phar](https://getcomposer.org/download/) | `/bin/php/composer.phar` |
+
 3. Instal *library* Python yang dibutuhkan:
 ```cmd
 pip install customtkinter pystray Pillow
