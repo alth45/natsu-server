@@ -65,7 +65,7 @@ MyLocalServer/
 
 ---
 
-## 🚀 Cara Instalasi & Penggunaan
+## 🚀 Cara Instalasi & Penggunaan (BAGI YANG MAU NGOPREK)
 
 ### Opsi 1: Untuk Pengguna Umum (Portable / Plug & Play)
 
