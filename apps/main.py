@@ -4,14 +4,16 @@ import subprocess
 import os
 import sys
 import threading
+import tkinter as tk
+from tkinter import messagebox
 
 import pystray
 from PIL import Image, ImageDraw
 from process_manager import ServerManager
 
-# --- Konfigurasi Tema GUI ---
-ctk.set_appearance_mode("Dark")  # Wajib dark mode agar terasa 'Unix'
-ctk.set_default_color_theme("blue")
+# --- Konfigurasi Tema GUI (Modern Dark) ---
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("dark-blue")
 
 class App(ctk.CTk):
     def __init__(self):
@@ -19,14 +21,14 @@ class App(ctk.CTk):
 
         # --- Seting Jendela Utama ---
         self.title("なつServer - Unix Edition")
-        self.geometry("700x450")
+        self.geometry("780x620")
         self.resizable(False, False)
+        self.configure(fg_color="#0d1117")
 
-        # Inisialisasi Backend Manager
+        # Inisialisasi Backend Manager (TIDAK DIUBAH)
         self.server = ServerManager()
         self.is_running = False
 
-        # Tangkap event close (Pembunuh Zombie)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # --- PENGATURAN GRID UTAMA (2 Kolom) ---
@@ -34,69 +36,271 @@ class App(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         # ==========================================
-        # BAGIAN KIRI: SIDEBAR (TOOLS)
+        # BAGIAN KIRI: SIDEBAR MODERN
         # ==========================================
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar_frame = ctk.CTkFrame(
+            self, width=230, corner_radius=0,
+            fg_color="#161b22", border_width=0
+        )
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(7, weight=1) # Dorong elemen ke atas
+        self.sidebar_frame.grid_rowconfigure(10, weight=1)
 
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="⚡ なつServer", font=ctk.CTkFont(size=24, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 30))
+        # Logo
+        self.logo_label = ctk.CTkLabel(
+            self.sidebar_frame,
+            text="⚡ なつServer",
+            font=ctk.CTkFont(family="Segoe UI", size=26, weight="bold"),
+            text_color="#58a6ff"
+        )
+        self.logo_label.grid(row=0, column=0, padx=24, pady=(25, 30))
 
-        # Tombol Tools
-        self.btn_web = ctk.CTkButton(self.sidebar_frame, text="🌐 Buka Browser", command=self.open_web, state="disabled")
-        self.btn_web.grid(row=1, column=0, padx=20, pady=10)
+        # Style dasar tombol sidebar
+        btn_style = {
+            "corner_radius": 12,
+            "height": 38,
+            "font": ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            "border_width": 1,
+            "border_color": "#30363d",
+            "text_color": "#e6edf3",
+            "anchor": "w"
+        }
 
-        self.btn_db = ctk.CTkButton(self.sidebar_frame, text="🗄️ Database", command=self.open_db)
-        self.btn_db.grid(row=2, column=0, padx=20, pady=10)
+        self.btn_web = ctk.CTkButton(
+            self.sidebar_frame, text="  🌐 Buka Browser",
+            fg_color="#1f6feb", hover_color="#388bfd",
+            state="disabled", **btn_style, command=self.open_web
+        )
+        self.btn_web.grid(row=1, column=0, padx=20, pady=7)
 
-        self.btn_folder = ctk.CTkButton(self.sidebar_frame, text="📁 Folder (www)", command=self.open_root_folder)
-        self.btn_folder.grid(row=3, column=0, padx=20, pady=10)
+        self.btn_db = ctk.CTkButton(
+            self.sidebar_frame, text="  🗄️ Database",
+            fg_color="#2ea043", hover_color="#3fb950",
+            **btn_style, command=self.open_db
+        )
+        self.btn_db.grid(row=2, column=0, padx=20, pady=7)
 
-        self.btn_terminal = ctk.CTkButton(self.sidebar_frame, text="💻 Terminal", fg_color="#17a2b8", hover_color="#138496", command=self.open_terminal)
-        self.btn_terminal.grid(row=4, column=0, padx=20, pady=10)
+        self.btn_folder = ctk.CTkButton(
+            self.sidebar_frame, text="  📁 Folder (www)",
+            fg_color="#d29922", hover_color="#e3b341",
+            corner_radius=12, height=38,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            border_width=1, border_color="#30363d",
+            text_color="#0d1117",
+            anchor="w",
+            command=self.open_root_folder
+        )
+        self.btn_folder.grid(row=3, column=0, padx=20, pady=7)
 
-        self.btn_ngrok = ctk.CTkButton(self.sidebar_frame, text="🌍 Share Live", fg_color="#f39c12", hover_color="#d68910", command=self.share_live)
-        self.btn_ngrok.grid(row=5, column=0, padx=20, pady=10)
+        self.btn_terminal = ctk.CTkButton(
+            self.sidebar_frame, text="  💻 Terminal",
+            fg_color="#1b9e9e", hover_color="#26c6c6",
+            **btn_style, command=self.open_terminal
+        )
+        self.btn_terminal.grid(row=4, column=0, padx=20, pady=7)
 
-        self.btn_laravel = ctk.CTkButton(self.sidebar_frame, text="🚀 New Laravel", fg_color="#ff2d20", hover_color="#cc2419", command=self.prompt_laravel)
-        self.btn_laravel.grid(row=6, column=0, padx=20, pady=10)
+        self.btn_ngrok = ctk.CTkButton(
+            self.sidebar_frame, text="  🌍 Share Live",
+            fg_color="#bf5b16", hover_color="#d97706",
+            **btn_style, command=self.share_live
+        )
+        self.btn_ngrok.grid(row=5, column=0, padx=20, pady=7)
+
+        self.btn_laravel = ctk.CTkButton(
+            self.sidebar_frame, text="  🚀 New Laravel",
+            fg_color="#c62828", hover_color="#e53935",
+            **btn_style, command=self.prompt_laravel
+        )
+        self.btn_laravel.grid(row=6, column=0, padx=20, pady=7)
+
+        self.mail_switch_var = ctk.StringVar(value="off")
+        self.mail_switch = ctk.CTkSwitch(
+            self.sidebar_frame,
+            text="📬 Mail Catcher",
+            command=self.on_mail_toggle,
+            variable=self.mail_switch_var,
+            onvalue="on", offvalue="off",
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            progress_color="#a371f7"
+        )
+        self.mail_switch.grid(row=7, column=0, padx=24, pady=(15, 5), sticky="w")
+
+        self.btn_mail_ui = ctk.CTkButton(
+            self.sidebar_frame, text="  📧 Buka Web Mail",
+            state="disabled", fg_color="#3a3f47", hover_color="#4c5159",
+            **btn_style, command=self.open_mail_ui
+        )
+        self.btn_mail_ui.grid(row=8, column=0, padx=20, pady=7)
+
+        self.btn_quit = ctk.CTkButton(
+            self.sidebar_frame, text="  🚪 Keluar Aplikasi",
+            fg_color="#b71c1c", hover_color="#d32f2f",
+            corner_radius=12, height=38,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            border_width=1, border_color="#ef5350",
+            text_color="#ffffff",
+            command=self.quit_app
+        )
+        self.btn_quit.grid(row=9, column=0, padx=20, pady=(30, 20))
 
         # ==========================================
-        # BAGIAN KANAN: MAIN PANEL (KONTROL & TERMINAL)
+        # BAGIAN KANAN: MAIN PANEL DENGAN CARDS MODERN
         # ==========================================
         self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
+        self.main_frame.grid(row=0, column=1, padx=30, pady=25, sticky="nsew")
         self.main_frame.grid_columnconfigure(0, weight=1)
 
-        # Indikator Status
-        self.status_label = ctk.CTkLabel(self.main_frame, text="[ STATUS: OFFLINE ]", text_color="#ff4c4c", font=ctk.CTkFont(size=18, weight="bold"))
-        self.status_label.grid(row=0, column=0, pady=(10, 20), sticky="w")
+        # --- Status Card ---
+        self.status_card = ctk.CTkFrame(
+            self.main_frame, fg_color="#161b22", corner_radius=16,
+            border_width=1, border_color="#30363d"
+        )
+        self.status_card.grid(row=0, column=0, sticky="ew", pady=(0, 15))
 
-        # Tombol Start/Stop (Bersebelahan)
-        self.control_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.control_frame.grid(row=1, column=0, sticky="ew")
-        self.control_frame.grid_columnconfigure((0, 1), weight=1)
+        self.status_label = ctk.CTkLabel(
+            self.status_card,
+            text="●  OFFLINE",
+            text_color="#ff4c4c",
+            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"),
+            padx=20, pady=12
+        )
+        self.status_label.pack(anchor="w")
 
-        self.btn_start = ctk.CTkButton(self.control_frame, text="▶ START", height=40, fg_color="#28a745", hover_color="#218838", font=ctk.CTkFont(weight="bold"), command=self.start_all)
-        self.btn_start.grid(row=0, column=0, padx=(0, 10), sticky="ew")
+        # --- Control Card ---
+        self.control_card = ctk.CTkFrame(
+            self.main_frame, fg_color="#161b22", corner_radius=16,
+            border_width=1, border_color="#30363d"
+        )
+        self.control_card.grid(row=1, column=0, sticky="ew", pady=(0, 15))
+        self.control_card.grid_columnconfigure((0, 1), weight=1)
 
-        self.btn_stop = ctk.CTkButton(self.control_frame, text="⏹ STOP", height=40, fg_color="#dc3545", hover_color="#c82333", font=ctk.CTkFont(weight="bold"), state="disabled", command=self.stop_all)
-        self.btn_stop.grid(row=0, column=1, padx=(10, 0), sticky="ew")
+        btn_big_style = {
+            "height": 50,
+            "corner_radius": 16,
+            "font": ctk.CTkFont(family="Segoe UI", size=15, weight="bold"),
+            "border_width": 2
+        }
 
-        # Terminal Box / Console Output
-        self.console_label = ctk.CTkLabel(self.main_frame, text="Terminal Log:", font=ctk.CTkFont(size=12, weight="bold"))
-        self.console_label.grid(row=2, column=0, pady=(20, 5), sticky="w")
+        self.btn_start = ctk.CTkButton(
+            self.control_card, text="▶  START",
+            fg_color="#1e7e34", hover_color="#2e9a4a",
+            border_color="#28a745", text_color="#ffffff",
+            **btn_big_style, command=self.start_all
+        )
+        self.btn_start.grid(row=0, column=0, padx=12, pady=12, sticky="ew")
 
-        self.console_box = ctk.CTkTextbox(self.main_frame, height=180, font=ctk.CTkFont(family="Consolas", size=12), fg_color="#1e1e1e", text_color="#00ff00")
-        self.console_box.grid(row=3, column=0, sticky="nsew")
+        self.btn_stop = ctk.CTkButton(
+            self.control_card, text="⏹  STOP",
+            fg_color="#941c2e", hover_color="#b02a3a",
+            border_color="#dc3545", text_color="#ffffff",
+            state="disabled", **btn_big_style, command=self.stop_all
+        )
+        self.btn_stop.grid(row=0, column=1, padx=12, pady=12, sticky="ew")
+
+        # --- Log Card (dengan toggle show/hide) ---
+        self.log_card = ctk.CTkFrame(
+            self.main_frame, fg_color="#161b22", corner_radius=16,
+            border_width=1, border_color="#30363d"
+        )
+        self.log_card.grid(row=2, column=0, sticky="nsew")
+        self.log_card.grid_columnconfigure(0, weight=1)
+        self.log_card.grid_rowconfigure(1, weight=1)  # baris terminal
+
+        # Header log
+        log_header = ctk.CTkFrame(self.log_card, fg_color="transparent")
+        log_header.grid(row=0, column=0, sticky="ew", padx=15, pady=(10, 5))
+
+        self.console_label = ctk.CTkLabel(
+            log_header,
+            text="▸ Terminal Log",
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            text_color="#8b949e"
+        )
+        self.console_label.pack(side="left")
+
+        self.toggle_log_btn = ctk.CTkButton(
+            log_header, text="▼", width=30, height=30,
+            fg_color="#30363d", hover_color="#444c56",
+            corner_radius=8, font=("Segoe UI", 14),
+            command=self.toggle_log_visibility
+        )
+        self.toggle_log_btn.pack(side="right")
+
+        # Terminal box
+        self.console_box = ctk.CTkTextbox(
+            self.log_card,
+            font=ctk.CTkFont(family="Cascadia Code", size=11),
+            fg_color="#0d1117",
+            text_color="#00ff41",
+            border_width=2,
+            border_color="#30363d",
+            corner_radius=10
+        )
+        self.console_box.grid(row=1, column=0, padx=15, pady=(0, 10), sticky="nsew")
         self.console_box.insert("0.0", "なつServer v1.0\nReady...\n")
-        self.console_box.configure(state="disabled") # Disable agar user tidak bisa mengetik
+        self.console_box.configure(state="disabled")
 
-        # --- Mengalihkan output 'print' Python ke Console GUI ---
+        self.log_visible = True
+
+        # --- Footer info ---
+        self.footer_label = ctk.CTkLabel(
+            self.main_frame,
+            text="なつServer v1.0 • Modern Dashboard",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color="#8b949e"
+        )
+        self.footer_label.grid(row=3, column=0, pady=(10, 0), sticky="e")
+
+        # Pastikan log_card mengisi sisa tinggi
+        self.main_frame.grid_rowconfigure(2, weight=1)
+
+        # Redirect stdout (TIDAK DIUBAH)
         self.redirect_stdout()
 
-    # --- FUNGSI REDIRECT LOG KE TERMINAL GUI ---
+        # --------------- BIND CONTEXT MENU (KLIK KANAN) ---------------
+        self.bind_context_menu()
+
+    def bind_context_menu(self):
+        """Aktifkan menu klik kanan di seluruh area aplikasi."""
+        widgets = [self, self.sidebar_frame, self.main_frame,
+                   self.status_card, self.control_card, self.log_card]
+        for w in widgets:
+            w.bind("<Button-3>", self.show_context_menu)
+
+    def show_context_menu(self, event):
+        """Tampilkan popup menu saat klik kanan."""
+        menu = tk.Menu(self, tearoff=0,
+                       bg='#161b22', fg='#e6edf3',
+                       activebackground='#1f6feb', activeforeground='#ffffff',
+                       font=('Segoe UI', 11))
+        menu.add_command(label="📊 Dashboard", command=lambda: print("Dashboard clicked"))
+        menu.add_command(label="⚙️ Settings", command=lambda: print("Settings clicked"))
+        menu.add_separator()
+        menu.add_command(label="🪟 Toggle Log", command=self.toggle_log_visibility)
+        menu.add_separator()
+        menu.add_command(label="🔗 About", command=self.show_about)
+        menu.add_command(label="🚪 Exit", command=self.quit_app)
+
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def show_about(self):
+        """Menampilkan dialog tentang aplikasi."""
+        messagebox.showinfo("About", "なつServer v1.0\nModern Development Server\nBuilt with CustomTkinter")
+
+    # --------------- FITUR TOGGLE LOG ---------------
+    def toggle_log_visibility(self):
+        if self.log_visible:
+            self.console_box.grid_remove()
+            self.toggle_log_btn.configure(text="▲")
+            self.log_visible = False
+        else:
+            self.console_box.grid()
+            self.toggle_log_btn.configure(text="▼")
+            self.log_visible = True
+
+    # --------------- FUNGSI BACKEND (TIDAK DIUBAH SAMA SEKALI) ---------------
     def redirect_stdout(self):
         class OutputRedirector:
             def __init__(self, textbox):
@@ -104,44 +308,38 @@ class App(ctk.CTk):
             def write(self, text):
                 self.textbox.configure(state="normal")
                 self.textbox.insert("end", text)
-                self.textbox.see("end") # Auto scroll ke bawah
+                self.textbox.see("end")
                 self.textbox.configure(state="disabled")
                 self.textbox.update()
             def flush(self):
                 pass
-        
         sys.stdout = OutputRedirector(self.console_box)
-        sys.stderr = sys.stdout # Tangkap error (warna merahnya nanti)
+        sys.stderr = sys.stdout
 
-    # --- FUNGSI-FUNGSI LOGIKA TOMBOL ---
     def start_all(self):
-        self.status_label.configure(text="[ STATUS: MENYALAKAN... ]", text_color="#f39c12")
+        self.status_label.configure(text="●  MENYALAKAN...", text_color="#f39c12")
         self.console_box.configure(state="normal")
         self.console_box.insert("end", "\n--- Inisiasi Proses ---\n")
         self.console_box.configure(state="disabled")
         self.update()
-
         try:
             self.server.start_services()
             self.is_running = True
-            
-            self.status_label.configure(text="[ STATUS: ONLINE (80, 3306) ]", text_color="#28a745")
+            self.status_label.configure(text="●  ONLINE (80, 3306)", text_color="#28a745")
             self.btn_start.configure(state="disabled")
             self.btn_stop.configure(state="normal")
             self.btn_web.configure(state="normal")
             print("\n[+] Sistem Siap Digunakan!")
         except Exception as e:
-            self.status_label.configure(text="[ STATUS: ERROR! ]", text_color="#ff4c4c")
+            self.status_label.configure(text="●  ERROR!", text_color="#ff4c4c")
             print(f"\n[!] GAGAL START: {e}")
 
     def stop_all(self):
-        self.status_label.configure(text="[ STATUS: MEMATIKAN... ]", text_color="#f39c12")
+        self.status_label.configure(text="●  MEMATIKAN...", text_color="#f39c12")
         self.update()
-
         self.server.stop_services()
         self.is_running = False
-        
-        self.status_label.configure(text="[ STATUS: OFFLINE ]", text_color="#ff4c4c")
+        self.status_label.configure(text="●  OFFLINE", text_color="#ff4c4c")
         self.btn_start.configure(state="normal")
         self.btn_stop.configure(state="disabled")
         self.btn_web.configure(state="disabled")
@@ -160,113 +358,87 @@ class App(ctk.CTk):
             print(f"[!] HeidiSQL tidak ditemukan.")
 
     def open_root_folder(self):
-        """Fitur baru: Buka folder www di Windows Explorer"""
         www_path = os.path.join(self.server.base_dir, 'www')
-        # Buka explorer menggunakan modul os bawaan Windows
         os.startfile(www_path)
         print("> Folder 'www' dibuka.")
 
     def create_tray_icon(self):
-        """Membuat gambar ikon secara dinamis (tanpa butuh file .ico eksternal)"""
-        # Membuat kanvas hitam ukuran 64x64
         image = Image.new('RGB', (64, 64), color=(24, 24, 24))
         dc = ImageDraw.Draw(image)
-        # Menggambar kotak merah khas 'Natsu/Laravel' di tengahnya
         dc.rectangle([(16, 16), (48, 48)], fill=(255, 45, 32))
         return image
-    
+
     def share_live(self):
-        """Memvalidasi dan memunculkan pop-up pilihan project sebelum memanggil Ngrok"""
         if not self.is_running:
             print("\n[!] Peringatan: Mohon jalankan server (START) terlebih dahulu sebelum membuka jalur ke internet!")
             return
-            
-        # Munculkan jendela dialog input
         dialog = ctk.CTkInputDialog(
-            text="Masukkan nama folder project yang ingin di-share\n(Contoh: library). Kosongkan jika ingin share default localhost:", 
+            text="Masukkan nama folder project yang ingin di-share\n(Contoh: library). Kosongkan jika ingin share default localhost:",
             title="🌍 Share Live via Ngrok"
         )
         project_name = dialog.get_input()
-
-        # Deteksi jika user menekan tombol OK
         if project_name is not None:
-            # Bersihkan dari spasi berlebih
             clean_name = project_name.strip().lower()
             self.server.share_live(clean_name)
 
+    def on_mail_toggle(self):
+        is_on = self.mail_switch_var.get() == "on"
+        if is_on:
+            self.btn_mail_ui.configure(state="normal", fg_color="#7c4dff", hover_color="#9670ff")
+        else:
+            self.btn_mail_ui.configure(state="disabled", fg_color="#3a3f47", hover_color="#4c5159")
+        self.server.toggle_mail_catcher(is_on)
+
+    def open_mail_ui(self):
+        webbrowser.open('http://127.0.0.1:8025')
+
+    def quit_app(self):
+        print("\n> Menutup aplikasi secara permanen...")
+        if self.is_running:
+            self.server.stop_services()
+        self.destroy()
+        os._exit(0)
+
     def on_closing(self):
-        """Dijalankan saat tombol X ditekan. Alih-alih keluar, kita sembunyikan (minimize to tray)"""
         print("\n> Aplikasi disembunyikan ke System Tray (Pojok kanan bawah).")
-        
-        # Sembunyikan jendela GUI utama
-        self.withdraw() 
-        
-        # Buat menu klik kanan di ikon System Tray
+        self.withdraw()
         menu = pystray.Menu(
             pystray.MenuItem('Tampilkan Dashboard', self.show_window),
             pystray.MenuItem('Matikan Server & Keluar', self.quit_window)
         )
-        
-        # Inisialisasi ikon System Tray
         self.tray_icon = pystray.Icon("NatsuServer", self.create_tray_icon(), "なつServer is Running", menu)
-        
-        # Jalankan ikon di background thread agar tidak membekukan sistem GUI
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
     def show_window(self, icon, item):
-        """Fungsi untuk mengembalikan jendela GUI dari System Tray"""
-        # Matikan ikon tray
-        self.tray_icon.stop() 
-        
-        # Tkinter butuh di-refresh dari jalur utama (Main Thread), kita pakai .after
-        self.after(0, self.deiconify) 
+        self.tray_icon.stop()
+        self.after(0, self.deiconify)
         print("> Dashboard dibuka kembali.")
 
     def quit_window(self, icon, item):
-        """Fungsi untuk menutup aplikasi sepenuhnya dari System Tray"""
-        # Matikan ikon tray
         self.tray_icon.stop()
-        
         if self.is_running:
             print("\n> Menjalankan prosedur penutupan otomatis...")
             self.server.stop_services()
-            
-        # Hancurkan jendela GUI sepenuhnya
         self.after(0, self.destroy)
-    
+
     def open_terminal(self):
-        """Memanggil fungsi terminal dari mesin backend"""
         self.server.open_terminal()
-    
+
     def prompt_laravel(self):
-        """Memunculkan pop-up untuk meminta nama project"""
-        # Cek apakah server menyala (wajib nyala untuk buat database)
         if not self.is_running:
             print("\n[!] Peringatan: Mohon jalankan (START) server terlebih dahulu agar sistem bisa otomatis membuat database!")
             return
-
-        # Munculkan jendela dialog input
         dialog = ctk.CTkInputDialog(text="Masukkan nama project Laravel (Gunakan huruf kecil & tanpa spasi):", title="🚀 Auto-Install Laravel")
         project_name = dialog.get_input()
-        
         if project_name:
-            # Cegah nama project pakai spasi
             project_name = project_name.replace(" ", "_").lower()
             print(f"\n> Menyiapkan instalasi Laravel: {project_name}...")
-            
-            # Matikan tombol sementara agar user tidak spam klik ganda
             self.btn_laravel.configure(state="disabled")
-            
-            # --- ILMU THREADING: Jalankan fungsi eksekusi di jalur background ---
             threading.Thread(target=self.run_laravel_installer, args=(project_name,), daemon=True).start()
 
     def run_laravel_installer(self, project_name):
-        """Fungsi yang berjalan secara diam-diam di thread terpisah"""
-        # Memanggil mesin dari process_manager.py
         is_success = self.server.create_laravel_project(project_name)
-        
         if is_success:
-            # Reset dan update ulang Virtual Host Windows
             print("\n[*] Mendaftarkan domain lokal ke sistem Windows...")
             active_domains = self.server.generate_vhosts()
             try:
@@ -274,8 +446,6 @@ class App(ctk.CTk):
                 print(f"\n[+] SELESAI! Silakan akses: http://{project_name}.test di browser.")
             except Exception as e:
                 print(f"[!] Info: Gagal mendaftarkan domain otomatis. {e}")
-
-        # Nyalakan kembali tombol Laravel-nya
         self.btn_laravel.configure(state="normal")
 
 if __name__ == "__main__":
