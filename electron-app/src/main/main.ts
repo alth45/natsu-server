@@ -31,7 +31,7 @@ function createWindow(): void {
     width: 780, height: 620, resizable: false,
     backgroundColor: '#0d1117', title: 'natsuServer',
     autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, '..', 'preload', 'preload.js'), contextIsolation: true, nodeIntegration: false },
+    webPreferences: { preload: path.join(__dirname, '..', 'preload', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   });
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   if (process.argv.includes('--dev')) mainWindow.webContents.openDevTools();
@@ -136,6 +136,38 @@ ipcMain.handle('app:confirm', async (_e, opts: ConfirmOptions) => {
   return r.response === 0;
 });
 ipcMain.handle('app:quit', () => { quitApp(); return { ok: true }; });
+// Opsi A — PHP switcher
+ipcMain.handle('php:list', () => {
+  try {
+    const { versions, activeId } = server.listPhpVersions();
+    return { ok: true, versions, activeId };
+  } catch (e) { return { ok: false, versions: [], activeId: '', error: (e as Error).message }; }
+});
+ipcMain.handle('php:set', (_e, id: unknown) => {
+  try {
+    const r = server.setPhpVersion(String(id ?? ''));
+    return { ok: r.ok, activeId: r.activeId, needsRestart: r.needsRestart, error: r.error || undefined };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+});
+ipcMain.handle('php:version', () => {
+  try {
+    const r = server.getPhpVersionString();
+    return { ok: r.ok, version: r.version || undefined };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+});
+// Opsi A — Auto-HTTPS
+ipcMain.handle('https:status', () => {
+  try {
+    const s = server.getHttpsStatus();
+    return { ok: true, enabled: s.enabled, certCount: s.certCount, domains: s.domains, tool: s.tool };
+  } catch (e) { return { ok: false, enabled: false, certCount: 0, domains: [], tool: 'none', error: (e as Error).message }; }
+});
+ipcMain.handle('https:set', (_e, en: unknown) => {
+  try {
+    const r = server.setHttpsEnabled(!!en);
+    return { ok: r.ok, enabled: r.enabled, needsRestart: r.needsRestart, error: r.error || undefined };
+  } catch (e) { return { ok: false, enabled: false, error: (e as Error).message }; }
+});
 app.whenReady().then(() => {
   createWindow();
   createTray();

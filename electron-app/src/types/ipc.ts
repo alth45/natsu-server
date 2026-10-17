@@ -34,6 +34,48 @@ export interface CreateLaravelResult extends OkResult {
   hostsMsg?: string;
 }
 
+export interface PhpVersionInfo {
+  id: string;
+  dir: string;
+  exe: string;
+  cgi: string;
+  composer: string;
+  label: string;
+  detected: string;
+  active: boolean;
+}
+
+export interface PhpListResult extends OkResult {
+  versions: PhpVersionInfo[];
+  activeId: string;
+  error?: string;
+}
+
+export interface PhpSetResult extends OkResult {
+  activeId?: string;
+  needsRestart?: boolean;
+  error?: string;
+}
+
+export interface PhpVersionResult extends OkResult {
+  version?: string;
+  error?: string;
+}
+
+export interface HttpsStatusResult extends OkResult {
+  enabled: boolean;
+  certCount: number;
+  domains: string[];
+  tool: string;
+  error?: string;
+}
+
+export interface HttpsToggleResult extends OkResult {
+  enabled: boolean;
+  needsRestart?: boolean;
+  error?: string;
+}
+
 /** API yang di-expose preload ke window.api */
 export interface NatsuApi {
   onLog(callback: (msg: string) => void): void;
@@ -49,4 +91,10 @@ export interface NatsuApi {
   createLaravel(projectName: string): Promise<CreateLaravelResult>;
   confirm(opts: ConfirmOptions): Promise<boolean>;
   quitApp(): Promise<OkResult>;
+  // Opsi A — PHP switcher + Auto-HTTPS
+  listPhpVersions(): Promise<PhpListResult>;
+  setPhpVersion(id: string): Promise<PhpSetResult>;
+  getPhpVersion(): Promise<PhpVersionResult>;
+  getHttpsStatus(): Promise<HttpsStatusResult>;
+  setHttpsEnabled(enabled: boolean): Promise<HttpsToggleResult>;
 }

@@ -18,51 +18,74 @@
         </div>
       </div>
 
-      <div class="side-section-title">Tools</div>
-      <button class="side-btn" id="btn-web" disabled>
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.9 5.7 3.9 9S14.5 18.4 12 21c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z"/></svg>
-        <span>Buka Browser</span>
-      </button>
-      <button class="side-btn" id="btn-db">
-        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
-        <span>Database</span>
-      </button>
-      <button class="side-btn" id="btn-folder">
-        <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
-        <span>Folder (www)</span>
-      </button>
-      <button class="side-btn" id="btn-terminal">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12.5 15H17"/></svg>
-        <span>Terminal</span>
-      </button>
-      <button class="side-btn" id="btn-ngrok">
-        <svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.6 1.5"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.6-1.5"/></svg>
-        <span>Share Live</span>
-      </button>
-      <button class="side-btn" id="btn-laravel">
-        <svg viewBox="0 0 24 24"><path d="M4.5 16.5L12 4l7.5 12.5H16l-4-7-4 7H4.5z"/><path d="M13.5 16.5H20"/></svg>
-        <span>New Laravel</span>
-      </button>
+      <div class="sidebar-scroll">
+        <div class="side-section-title">Tools</div>
+        <button class="side-btn" id="btn-web" disabled>
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.9 5.7 3.9 9S14.5 18.4 12 21c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z"/></svg>
+          <span>Buka Browser</span>
+        </button>
+        <button class="side-btn" id="btn-db">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          <span>Database</span>
+        </button>
+        <button class="side-btn" id="btn-folder">
+          <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+          <span>Folder (www)</span>
+        </button>
+        <button class="side-btn" id="btn-terminal">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12.5 15H17"/></svg>
+          <span>Terminal</span>
+        </button>
+        <button class="side-btn" id="btn-ngrok">
+          <svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.6 1.5"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.6-1.5"/></svg>
+          <span>Share Live</span>
+        </button>
+        <button class="side-btn" id="btn-laravel">
+          <svg viewBox="0 0 24 24"><path d="M4.5 16.5L12 4l7.5 12.5H16l-4-7-4 7H4.5z"/><path d="M13.5 16.5H20"/></svg>
+          <span>New Laravel</span>
+        </button>
 
-      <div class="side-divider"></div>
+        <div class="side-divider"></div>
 
-      <label class="switch-row">
-        <span class="switch-label">Mail Catcher</span>
-        <span class="switch">
-          <input type="checkbox" id="mail-switch">
-          <span class="slider"></span>
-        </span>
-      </label>
-      <button class="side-btn" id="btn-mail-ui" disabled>
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-        <span>Buka Web Mail</span>
-      </button>
+        <div class="side-section-title">Environment</div>
+        <label class="env-label" for="php-select">PHP Version</label>
+        <div class="env-row">
+          <select class="env-select" id="php-select" title="Pilih versi PHP aktif">
+            <option value="">Memuat...</option>
+          </select>
+          <button class="env-refresh" id="php-refresh" title="Rescan folder bin/php*">⟳</button>
+        </div>
+        <div class="env-hint" id="php-hint">bin/php</div>
+        <label class="switch-row">
+          <span class="switch-label">HTTPS <span class="switch-sub">:443 + *.test</span></span>
+          <span class="switch">
+            <input type="checkbox" id="https-switch">
+            <span class="slider"></span>
+          </span>
+        </label>
+        <div class="env-hint" id="https-hint">HTTP :80</div>
 
-      <div class="spacer"></div>
-      <button class="side-btn quit" id="btn-quit">
-        <svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>
-        <span>Keluar Aplikasi</span>
-      </button>
+        <div class="side-divider"></div>
+
+        <label class="switch-row">
+          <span class="switch-label">Mail Catcher</span>
+          <span class="switch">
+            <input type="checkbox" id="mail-switch">
+            <span class="slider"></span>
+          </span>
+        </label>
+        <button class="side-btn" id="btn-mail-ui" disabled>
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          <span>Buka Web Mail</span>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="side-btn quit" id="btn-quit">
+          <svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>
+          <span>Keluar Aplikasi</span>
+        </button>
+      </div>
     </aside>
 
     <!-- ============ PANEL UTAMA ============ -->
@@ -84,7 +107,7 @@
         <button class="action-btn primary" id="btn-start">
           <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5-13-7.5z"/></svg>
           <span class="action-label">START</span>
-          <span class="action-hint">Jalankan semua service</span>
+          <span class="action-hint" id="start-hint">Jalankan semua service</span>
         </button>
         <button class="action-btn danger" id="btn-stop" disabled>
           <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>

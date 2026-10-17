@@ -14,17 +14,33 @@ electron-app/
 └── src/
     ├── main/
     │   ├── main.ts            # Main process: window, tray, IPC handlers
-    │   └── server-manager.ts  # Port dari process_manager.py (backend service)
+    │   ├── server-manager.ts  # Backend service (PHP aktif + HTTPS aware)
+    │   ├── php-manager.ts     # Opsi A: scan bin/php*, settings, detect version
+    │   └── https-manager.ts   # Opsi A: mkcert/openssl, blok SSL vhost
     ├── preload/
     │   └── preload.ts         # Bridge aman renderer <-> main (contextBridge)
     ├── types/
     │   └── ipc.ts             # Kontrak IPC bersama (NatsuApi, result types)
     └── renderer/
-        ├── index.html         # Layout dashboard (sidebar + cards + log terminal)
+        ├── index.html         # Layout dashboard + Environment section
         ├── styles.css         # Tema modern dark (#0d1117 ala GitHub)
-        ├── renderer.ts        # Logika UI (start/stop, ngrok, laravel, mail catcher)
+        ├── renderer.ts        # Logika UI (+ PHP dropdown + HTTPS toggle)
         └── global.d.ts        # Deklarasi window.api
 ```
+
+## Opsi A — PHP Switcher + Auto-HTTPS
+
+### PHP Version Switcher
+- Letakkan tiap versi di `bin/phpXX/` (contoh: `bin/php/`, `bin/php82/`, `bin/php83/`), masing-masing wajib ada `php.exe` + `php-cgi.exe` (+ `composer.phar` bila mau Laravel installer).
+- Dropdown di sidebar otomatis scan folder tersebut, tampilkan label + versi terdeteksi (`php -v`).
+- Pilihan tersimpan di `config/natsu-settings.json` (`{ phpId, httpsEnabled }`).
+- Ganti versi saat server jalan → backend stop otomatis, user klik START lagi (path PHP-CGI, Laravel installer, dan Quick Terminal semuanya ikut versi aktif).
+
+### Auto-HTTPS (*.test + localhost :443)
+- Toggle HTTPS di sidebar. Saat ON pertama kali: backend generate `config/certs/natsu.key` + `natsu.crt` (wildcard `*.test`, `localhost`, `127.0.0.1`).
+- Urutan tool: `mkcert` (trusted, butuh `mkcert -install` sekali sebagai admin) → fallback `openssl` (self-signed 10 tahun).
+- Tiap vhost + server localhost otomatis dapat blok `listen 443 ssl`. Akses: `https://namaproject.test`.
+- Catatan: bila pakai fallback openssl (self-signed), browser akan warning — klik Advanced → Proceed, atau install `mkcert` agar hijau trusted.
 
 ## Menjalankan
 

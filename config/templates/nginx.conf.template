@@ -15,7 +15,7 @@ http {
     access_log "{BASE_DIR}/logs/nginx_access.log";
 
     server {
-        listen       80;
+        listen       80;{HTTPS_BLOCK}
         server_name  localhost;
 
         # Arahkan document root ke folder www 

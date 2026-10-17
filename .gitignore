@@ -34,6 +34,9 @@ logs/
 # Generated config (templates in config/templates/ stay tracked)
 config/my.ini
 config/nginx.conf
+config/natsu-settings.json
+config/certs/
+config/vhosts/
 
 # IDE
 .idea/
