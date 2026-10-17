@@ -106,14 +106,23 @@
       <!-- Log Card -->
       <section class="card log-card">
         <div class="log-header">
+          <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
           <span class="log-title">Terminal Log</span>
-          <button class="toggle-log-btn" id="toggle-log" title="Show/Hide Log">
-            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
+          <div class="log-actions">
+            <button class="log-action-btn" id="clear-log" title="Bersihkan Log">
+              <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m3 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6"/></svg>
+            </button>
+            <button class="log-action-btn" id="autoscroll-toggle" title="Auto-Scroll: ON">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+            </button>
+            <button class="toggle-log-btn" id="toggle-log" title="Show/Hide Log">
+              <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
         </div>
-        <pre class="console" id="console">なつServer v1.0 (Electron Edition)
-Ready...
-</pre>
+        <div class="console-wrap">
+          <div class="console" id="console" role="log" aria-live="polite"><div class="log-line">&nbsp;</div></div>
+        </div>
       </section>
 
       <footer class="footer">なつServer v1.0 • Electron Edition</footer>
