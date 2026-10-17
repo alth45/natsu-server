@@ -4,7 +4,8 @@
   <p><b>The Ultimate Lightweight & Portable Local Development Environment.</b></p>
   <p><i>Lebih dari sekadar web server. Ini adalah asisten pribadimu untuk mendevelop aplikasi PHP & Laravel dengan kecepatan penuh, tanpa biaya lisensi!</i></p>
 
-  ![Python](https://img.shields.io/badge/Made_with-Python_3-blue?style=for-the-badge&logo=python)
+  ![Electron](https://img.shields.io/badge/GUI-Electron_31-47848F?style=for-the-badge&logo=electron)
+  ![Python](https://img.shields.io/badge/Backend-Python_3-blue?style=for-the-badge&logo=python)
   ![Nginx](https://img.shields.io/badge/Server-Nginx-green?style=for-the-badge&logo=nginx)
   ![MariaDB](https://img.shields.io/badge/Database-MariaDB-white?style=for-the-badge&logo=mariadb)
   ![Open Source](https://img.shields.io/badge/License-Free_&_Open_Source-red?style=for-the-badge)
@@ -32,25 +33,43 @@ Bosan dengan aplikasi *local server* yang memakan banyak RAM, meninggalkan *regi
     Ingin memamerkan proyek lokalmu ke klien atau melakukan *testing* di *smartphone*? Klik tombol "Share Live", dan なつServer akan menyuntikkan *Host Header* yang tepat dan memberikanmu URL publik detik itu juga.
 *   **👻 Silent Background Mode (System Tray)**
     Tidak akan menuh-menuhin *Taskbar*. Tekan tombol silang, dan aplikasi akan bersembunyi dengan manis di pojok jam Windows sambil terus melayani *request* servermu.
+*   **📬 Built-in Mail Catcher**
+    Fitur baru khas Laragon! Tangkap semua email yang dikirim aplikasi PHP/Laravel-mu secara lokal (SMTP port `1025`) dan baca lewat web UI di **`http://127.0.0.1:8025`** — tanpa perlu akun SMTP eksternal atau khawatir email tes terkirim ke orang sungguhan.
 
 ---
 
 ## 🛠️ Arsitektur & Teknologi di Balik Layar
 
-Aplikasi GUI ini tidak menggunakan *browser engine* yang berat (seperti Electron), melainkan ditulis menggunakan **Python (CustomTkinter)** dan berjalan murni mengandalkan *subprocess* bawaan sistem operasi.
+Sejak **Electron Edition**, GUI dashboard ditulis ulang dari CustomTkinter/Tkinter menjadi **Electron** dengan tema gelap modern ala GitHub (`#0d1117`). Backend layanan tetap bertumpu pada *subprocess* bawaan sistem operasi yang diatur oleh *process manager* Python.
 
-*   **GUI & Process Manager:** Python 3 (CustomTkinter, Threading, Pystray)
+*   **GUI Dashboard:** Electron 31 (Main process + Preload `contextBridge` + Renderer HTML/CSS/JS)
+*   **Backend Service & Process Manager:** Python 3 (`apps/process_manager.py` — Nginx/PHP-CGI/MariaDB, vHost generator, Mail Catcher via `aiosmtpd`)
 *   **Web Server:** Nginx (Super ringan & cepat)
 *   **Database:** MariaDB (Open Source & drop-in replacement untuk MySQL)
-*   **PHP:** Thread Safe Edition
+*   **PHP:** Thread Safe Edition (mode `php-cgi`)
 
 ---
 
-## 📂 Struktur Direktori Bersih
+## 📂 Struktur Proyek & Direktori Runtime
 
-Semua kebutuhan sistem tersimpan rapi dalam satu folder utama. Kamu bebas memindahkannya ke *Drive* D:, *Flashdisk*, atau komputer lain.
+Repo ini berisi source code GUI + backend. Saat dijalankan secara *portable*, semua kebutuhan sistem tersimpan rapi dalam satu folder utama yang bebas kamu pindahkan ke *Drive* D:, *Flashdisk*, atau komputer lain.
 
 ```text
+natsu-server/                 # Repo ini (source code)
+├── apps/
+│   ├── main.py               # Launcher/Bridge: cek Node.js -> jalankan Electron (+ sidecar --mail)
+│   ├── process_manager.py    # Backend: start/stop services, vHost, Laravel installer, Mail Catcher
+│   └── ui/                   # Aset UI pendukung
+├── electron-app/             # GUI Electron Edition
+│   ├── package.json
+│   └── src/
+│       ├── main/             # main.js (window, tray, IPC) + server-manager.js
+│       ├── preload/          # preload.js (bridge aman renderer <-> main)
+│       └── renderer/         # index.html, styles.css, renderer.js
+├── config/                   # Template konfigurasi dinamis (nginx.conf, my.ini, php.ini)
+└── ...                       # Folder runtime tambahan saat dipakai: bin/, data/, logs/, www/
+
+Runtime (hasil ekstrak rilis portable):
 MyLocalServer/
 │
 ├── なつServer.exe        <-- Aplikasi Utama (Klik ini untuk mulai)
@@ -60,7 +79,6 @@ MyLocalServer/
 ├── data/                   # Tempat database MySQL tersimpan
 ├── logs/                   # Log error sistem
 └── www/                    # 📁 Taruh semua folder project web kamu di sini!
-
 ```
 
 ---
@@ -76,7 +94,7 @@ MyLocalServer/
 
 ### Opsi 2: Untuk Developer (Build dari Source Code)
 
-Jika kamu ingin ikut mengembangkan aplikasi GUI ini:
+Jika kamu ingin ikut mengembangkan aplikasi ini, kamu butuh **Node.js (untuk GUI Electron)** dan **Python 3 (untuk backend process manager)**.
 
 1. *Clone* repositori ini: `git clone https://github.com/username/natsu-server.git`
 2. Unduh manual *engine* Nginx, PHP, MariaDB, dan letakkan ke dalam folder `/bin/` sesuai struktur direktori.
@@ -92,20 +110,29 @@ Unduh semua bahan di bawah ini dan ekstrak ke dalam folder /bin/ sesuai dengan n
 | **Ngrok** | Live Share | [Ngrok for Windows (ZIP)](https://ngrok.com/download) | `/bin/ngrok/` |
 | **Composer** | Laravel Installer | [composer.phar](https://getcomposer.org/download/) | `/bin/php/composer.phar` |
 
-3. Instal *library* Python yang dibutuhkan:
+3. Instal *library* Python yang dibutuhkan (untuk backend & Mail Catcher):
 ```cmd
-pip install customtkinter pystray Pillow
-
+pip install aiosmtpd
 ```
 
-
-4. Jalankan aplikasi via terminal: `python app/main.py`
-5. Untuk *compile* ulang menjadi `.exe`:
+4. Jalankan aplikasi lewat launcher (launcher akan otomatis mengecek Node.js dan menjalankan `npm install` bila perlu):
 ```cmd
-python -m PyInstaller --onefile --noconsole --name "なつServer" main.py
-
+python apps/main.py            # meluncurkan GUI Electron
+python apps/main.py --mail     # + Mail Catcher sidecar (SMTP :1025, UI :8025)
 ```
 
+Atau langsung dari folder Electron:
+```cmd
+cd electron-app
+npm install
+npm start                      # atau: npm run dev (dengan DevTools)
+```
+
+5. Untuk *build* installer Windows (`.exe` via electron-builder, target NSIS):
+```cmd
+cd electron-app
+npm run dist
+```
 
 
 ---
