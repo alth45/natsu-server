@@ -2,24 +2,28 @@
   "name": "natsu-server",
   "version": "1.0.0",
   "description": "なつServer - Modern Development Server (Electron Edition)",
-  "main": "src/main/main.js",
+  "main": "dist/main/main.js",
   "author": "Natsu",
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "build": "tsc && node scripts/copy-assets.js",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron . --dev",
+    "typecheck": "tsc --noEmit",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
   },
   "devDependencies": {
+    "@types/node": "^20.12.0",
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.4.0"
   },
   "build": {
     "appId": "com.natsu.server",
     "productName": "なつServer",
     "files": [
-      "src/**/*"
+      "dist/**/*"
     ],
     "win": {
       "target": "nsis"

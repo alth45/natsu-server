@@ -1,7 +1,40 @@
-# なつServer — Electron Edition
+# なつServer — Electron Edition (TypeScript)
 
 GUI dashboard development server (Nginx + PHP-CGI + MySQL/MariaDB) yang di-rewrite
-dari **CustomTkinter/Tkinter** menjadi **Electron**.
+dari **CustomTkinter/Tkinter** menjadi **Electron + TypeScript**.
+
+## Struktur
+
+```
+electron-app/
+├── package.json          # main: dist/main/main.js, scripts build via tsc
+├── tsconfig.json         # strict TS -> dist/
+├── scripts/
+│   └── copy-assets.js    # copy index.html + styles.css -> dist/renderer/
+└── src/
+    ├── main/
+    │   ├── main.ts            # Main process: window, tray, IPC handlers
+    │   └── server-manager.ts  # Port dari process_manager.py (backend service)
+    ├── preload/
+    │   └── preload.ts         # Bridge aman renderer <-> main (contextBridge)
+    ├── types/
+    │   └── ipc.ts             # Kontrak IPC bersama (NatsuApi, result types)
+    └── renderer/
+        ├── index.html         # Layout dashboard (sidebar + cards + log terminal)
+        ├── styles.css         # Tema modern dark (#0d1117 ala GitHub)
+        ├── renderer.ts        # Logika UI (start/stop, ngrok, laravel, mail catcher)
+        └── global.d.ts        # Deklarasi window.api
+```
+
+## Menjalankan
+
+```bash
+cd electron-app
+npm install
+npm start          # build (tsc) + electron .
+npm run dev        # build + electron dengan DevTools
+npm run typecheck  # cek tipe tanpa emit
+```
 
 > Versi Tkinter lama dibackup di: `../backup/main_tkinter.py.bak`
 
