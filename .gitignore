@@ -26,12 +26,28 @@ apps/dist/
 *.backup
 backup/
 
-# Log / runtime
-*.log
-logs/
-*.pid
+# Binary runtime (portable engines — JANGAN commit binary-nya, cukup strukturnya)
+# Catatan: `!bin/**/` wajib ada supaya git berani masuk subfolder yang tadi di-ignore
+bin/**/*
+!bin/**/
+!bin/.gitkeep
+!bin/**/.gitkeep
+!bin/**/README.md
 
-# Generated config (templates in config/templates/ stay tracked)
+# Data & runtime (jangan commit isi database / log lokal)
+data/**/*
+!data/**/
+!data/**/.gitkeep
+!data/**/README.md
+www/**/*
+!www/**/
+!www/**/.gitkeep
+!www/**/README.md
+logs/**/*
+!logs/**/
+!logs/**/.gitkeep
+*.log
+*.pid
 config/my.ini
 config/nginx.conf
 config/natsu-settings.json

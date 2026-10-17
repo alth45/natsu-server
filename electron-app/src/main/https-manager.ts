@@ -27,10 +27,14 @@ function tryMkcert(baseDir: string): boolean {
   try {
     const { crt, key } = certPaths(baseDir);
     fs.mkdirSync(certDir(baseDir), { recursive: true });
+    // Coba mkcert portable di bin/mkcert/mkcert.exe dulu (tinggal drop file),
+    // baru fallback ke mkcert di PATH.
+    const local = path.join(baseDir, 'bin', 'mkcert', 'mkcert.exe');
+    const tool = fs.existsSync(local) ? local : 'mkcert';
     // mkcert -install (sekali saja, butuh admin) lalu generate wildcard lokal
-    spawnSync('mkcert', ['-install'], { windowsHide: true, timeout: 30000, stdio: 'ignore' });
+    spawnSync(tool, ['-install'], { windowsHide: true, timeout: 30000, stdio: 'ignore' });
     const r = spawnSync(
-      'mkcert',
+      tool,
       ['-key-file', key, '-cert-file', crt, 'localhost', '127.0.0.1', '::1', '*.test'],
       { windowsHide: true, timeout: 30000, encoding: 'utf8' }
     );
