@@ -1,0 +1,28 @@
+{
+  "name": "natsu-server",
+  "version": "1.0.0",
+  "description": "なつServer - Modern Development Server (Electron Edition)",
+  "main": "src/main/main.js",
+  "author": "Natsu",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.natsu.server",
+    "productName": "なつServer",
+    "files": [
+      "src/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
