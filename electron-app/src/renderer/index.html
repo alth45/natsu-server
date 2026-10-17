@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>なつServer - Unix Edition</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- ============ SIDEBAR KIRI ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="logo">⚡ なつServer</div>
+
+      <button class="side-btn blue"   id="btn-web"     disabled>🌐 Buka Browser</button>
+      <button class="side-btn green"  id="btn-db">🗄️ Database</button>
+      <button class="side-btn yellow" id="btn-folder">📁 Folder (www)</button>
+      <button class="side-btn teal"   id="btn-terminal">💻 Terminal</button>
+      <button class="side-btn orange" id="btn-ngrok">🌍 Share Live</button>
+      <button class="side-btn red"    id="btn-laravel">🚀 New Laravel</button>
+
+      <label class="switch-row">
+        <span class="switch-label">📬 Mail Catcher</span>
+        <span class="switch">
+          <input type="checkbox" id="mail-switch">
+          <span class="slider"></span>
+        </span>
+      </label>
+      <button class="side-btn gray" id="btn-mail-ui" disabled>📧 Buka Web Mail</button>
+
+      <div class="spacer"></div>
+      <button class="side-btn quit" id="btn-quit">🚪 Keluar Aplikasi</button>
+    </aside>
+
+    <!-- ============ PANEL UTAMA ============ -->
+    <main class="main-panel">
+      <!-- Status Card -->
+      <section class="card status-card">
+        <div class="status offline" id="status-label">●&nbsp;&nbsp;OFFLINE</div>
+      </section>
+
+      <!-- Control Card -->
+      <section class="card control-card">
+        <button class="big-btn start" id="btn-start">▶&nbsp;&nbsp;START</button>
+        <button class="big-btn stop" id="btn-stop" disabled>⏹&nbsp;&nbsp;STOP</button>
+      </section>
+
+      <!-- Log Card -->
+      <section class="card log-card">
+        <div class="log-header">
+          <span class="log-title">▸ Terminal Log</span>
+          <button class="toggle-log-btn" id="toggle-log" title="Show/Hide Log">▼</button>
+        </div>
+        <pre class="console" id="console">なつServer v1.0 (Electron Edition)
+Ready...
+</pre>
+      </section>
+
+      <footer class="footer">なつServer v1.0 • Modern Dashboard • Electron Edition</footer>
+    </main>
+  </div>
+
+  <!-- Context Menu (klik kanan) -->
+  <div class="context-menu hidden" id="context-menu">
+    <div class="ctx-item" data-action="dashboard">📊 Dashboard</div>
+    <div class="ctx-item" data-action="settings">⚙️ Settings</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="toggle-log">🪟 Toggle Log</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="about">🔗 About</div>
+    <div class="ctx-item" data-action="exit">🚪 Exit</div>
+  </div>
+
+  <!-- Modal prompt (pengganti CTkInputDialog) -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">Input</div>
+      <div class="modal-text" id="modal-text"></div>
+      <input type="text" class="modal-input" id="modal-input" autocomplete="off">
+      <div class="modal-actions">
+        <button class="modal-btn cancel" id="modal-cancel">Batal</button>
+        <button class="modal-btn ok" id="modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
