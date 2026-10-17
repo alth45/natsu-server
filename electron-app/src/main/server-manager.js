@@ -4,7 +4,7 @@
  * Tugas: mengatur proses PHP-CGI, MySQL/MariaDB, Nginx, Mail Catcher, Ngrok,
  * instalasi Laravel, vhost generator, dan update file hosts Windows.
  */
-const { spawn, execSync } = require('child_process');
+const { spawn, exec } = require('child_process');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
@@ -68,11 +68,19 @@ class ServerManager {
     const vhostDir = path.join(this.baseDir, 'config', 'vhosts');
     fs.mkdirSync(vhostDir, { recursive: true });
 
+    // Precompute nilai yang sama untuk setiap vhost — jangan ulang di dalam loop
+    const baseDirUnix = this.baseDir.replace(/\\/g, '/');
+    const fastcgiInclude = `"${baseDirUnix}/bin/nginx/conf/fastcgi_params"`;
+
     const domainsFound = [];
     if (fs.existsSync(wwwDir)) {
       for (const item of fs.readdirSync(wwwDir)) {
         const itemPath = path.join(wwwDir, item);
-        if (!fs.statSync(itemPath).isDirectory()) continue;
+        let isDir = false;
+        try {
+          isDir = fs.statSync(itemPath).isDirectory();
+        } catch (e) { continue; } // symlink mati / akses ditolak → lewati tanpa crash
+        if (!isDir) continue;
 
         const domainName = `${item}.test`;
         domainsFound.push(domainName);
@@ -90,7 +98,6 @@ class ServerManager {
           nginxTryFiles = 'try_files $uri $uri/ =404;';
         }
 
-        const baseDirUnix = this.baseDir.replace(/\\/g, '/');
         const vhostContent = `
 server {
     listen 80;
@@ -104,11 +111,19 @@ server {
         fastcgi_pass 127.0.0.1:9000;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include "${baseDirUnix}/bin/nginx/conf/fastcgi_params";
+        include ${fastcgiInclude};
     }
 }
 `;
-        fs.writeFileSync(path.join(vhostDir, `${item}.conf`), vhostContent);
+        const confPath = path.join(vhostDir, `${item}.conf`);
+        // Hanya tulis ulang jika konten berubah — hemat I/O dan hindari churn config nginx
+        let needsWrite = true;
+        try {
+          if (fs.existsSync(confPath) && fs.readFileSync(confPath, 'utf8') === vhostContent) {
+            needsWrite = false;
+          }
+        } catch (e) { /* baca gagal → tulis ulang */ }
+        if (needsWrite) fs.writeFileSync(confPath, vhostContent);
       }
     }
     this.log(`    -> Ditemukan ${domainsFound.length} domain kustom.`);
@@ -119,11 +134,15 @@ server {
     if (!domains.length) return;
     const hostsPath = 'C:\\Windows\\System32\\drivers\\etc\\hosts';
     try {
-      const lines = fs.existsSync(hostsPath) ? fs.readFileSync(hostsPath, 'utf8').split('\n') : [];
+      const content = fs.existsSync(hostsPath) ? fs.readFileSync(hostsPath, 'utf8') : '';
+      // Satu kali pass tokenisasi O(n) → lookup keanggotaan domain jadi O(1),
+      // bukan O(n×m) seperti nested loop `lines.some(...)` sebelumnya.
+      const existingTokens = new Set(content.split(/\s+/));
       const newEntries = [];
       for (const domain of domains) {
-        if (!lines.some((l) => l.includes(domain))) {
+        if (!existingTokens.has(domain)) {
           newEntries.push(`127.0.0.1 ${domain} # MyLocalServer\n`);
+          existingTokens.add(domain); // hindari duplikat dalam batch yang sama
         }
       }
       if (newEntries.length) {
@@ -154,8 +173,13 @@ server {
       3306: 'MYSQL / Mariadb Lain',
       9000: 'PHP_CGI',
     };
-    for (const [port, appName] of Object.entries(portsToCheck)) {
-      if (await this.isPortInUse(Number(port))) {
+    // Semua port dicek paralel (hemat waktu start-up hingga ~3x lipat)
+    // lalu hasil dikumpulkan sekaligus sebelum throw pertama.
+    const entries = Object.entries(portsToCheck);
+    const results = await Promise.all(entries.map(([port]) => this.isPortInUse(Number(port))));
+    for (let i = 0; i < entries.length; i++) {
+      if (results[i]) {
+        const [port, appName] = entries[i];
         throw new Error(`PORT ${port} BENTROK! Sedang dipakai oleh ${appName}.`);
       }
     }
@@ -326,14 +350,21 @@ server {
 
     this.isRunning = false;
 
-    // 3. SAPU BERSIH (Brute-force Kill Anti-Zombie) — khusus Windows
+    // 3. SAPU BERSIH (Brute-force Kill Anti-Zombie) — khusus Windows.
+    // Gunakan exec async (bukan execSync) agar tidak serial memblokir event loop,
+    // dan spawn cmd.exe untuk dukungan redirect `>nul` yang sama seperti sebelumnya.
     this.log('[*] Memastikan memori bersih dari sisa proses...');
     if (process.platform === 'win32') {
-      try {
-        execSync('taskkill /f /im nginx.exe >nul 2>&1');
-        execSync('taskkill /f /im php-cgi.exe >nul 2>&1');
-        execSync('taskkill /f /im mysqld.exe >nul 2>&1');
-      } catch (e) { /* proses mungkin sudah mati */ }
+      const killCmds = [
+        'taskkill /f /im nginx.exe >nul 2>&1',
+        'taskkill /f /im php-cgi.exe >nul 2>&1',
+        'taskkill /f /im mysqld.exe >nul 2>&1',
+      ];
+      for (const cmd of killCmds) {
+        try {
+          exec(cmd, () => { /* proses mungkin sudah mati */ });
+        } catch (e) { /* ignore */ }
+      }
     } else {
       // Fallback non-Windows (dev di Linux/Mac): kill child process yang kita spawn
       for (const p of Object.values(this.processes)) {
