@@ -15,6 +15,8 @@
   const consoleBox = $('console');
   const btnStart = $('btn-start');
   const btnStop = $('btn-stop');
+  const btnOpenWeb = $('btn-open-web');
+  const btnTools = $('btn-tools');
   const btnWeb = $('btn-web');
   const btnDb = $('btn-db');
   const btnFolder = $('btn-folder');
@@ -39,13 +41,30 @@
     consoleBox.scrollTop = consoleBox.scrollHeight;
   }
 
+  // ---------- Animasi Ripple (sentuhan) pada semua tombol ----------
+  function attachRipple(el) {
+    el.addEventListener('pointerdown', (e) => {
+      if (el.disabled) return;
+      const rect = el.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      el.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove());
+    });
+  }
+  document.querySelectorAll('.side-btn, .action-btn, .modal-btn').forEach(attachRipple);
+
   if (window.api && window.api.onLog) {
     window.api.onLog((msg) => print(msg));
   }
 
   function setStatus(text, cls) {
-    statusLabel.textContent = text;
-    statusLabel.className = 'status ' + cls;
+    statusLabel.querySelector('.status-text').textContent = text;
+    statusLabel.className = 'status-pill ' + cls;
   }
 
   // ---------- Modal Prompt (pengganti CTkInputDialog) ----------
@@ -79,35 +98,48 @@
 
   // ---------- Kontrol Server ----------
   async function startAll() {
-    setStatus('●  MENYALAKAN...', 'starting');
+    setStatus('MENYALAKAN...', 'starting');
     print('\n--- Inisiasi Proses ---');
     const res = await window.api.startServer();
     if (res.ok) {
       isRunning = true;
-      setStatus('●  ONLINE (80, 3306)', 'online');
+      setStatus('ONLINE (80, 3306)', 'online');
       btnStart.disabled = true;
       btnStop.disabled = false;
       btnWeb.disabled = false;
+      btnOpenWeb.disabled = false;
       print('\n[+] Sistem Siap Digunakan!');
     } else {
-      setStatus('●  ERROR!', 'error');
+      setStatus('ERROR!', 'error');
       print(`\n[!] GAGAL START: ${res.error}`);
     }
   }
 
   async function stopAll() {
-    setStatus('●  MEMATIKAN...', 'starting');
+    setStatus('MEMATIKAN...', 'starting');
     await window.api.stopServer();
     isRunning = false;
-    setStatus('●  OFFLINE', 'offline');
+    setStatus('OFFLINE', 'offline');
     btnStart.disabled = false;
     btnStop.disabled = true;
     btnWeb.disabled = true;
+    btnOpenWeb.disabled = true;
     print('\n[-] Semua Service Telah Dihentikan.');
   }
 
   btnStart.addEventListener('click', startAll);
   btnStop.addEventListener('click', stopAll);
+  btnOpenWeb.addEventListener('click', async () => {
+    await window.api.openWeb();
+    print('> Browser dibuka.');
+  });
+  btnTools.addEventListener('click', () => {
+    // Munculkan context menu di posisi tombol Quick Tools
+    const rect = btnTools.getBoundingClientRect();
+    ctxMenu.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+    ctxMenu.style.top = Math.min(rect.bottom + 6, window.innerHeight - 220) + 'px';
+    ctxMenu.classList.remove('hidden');
+  });
 
   // ---------- Sidebar Actions ----------
   btnWeb.addEventListener('click', async () => {
@@ -165,13 +197,7 @@
 
   mailSwitch.addEventListener('change', async () => {
     const enabled = mailSwitch.checked;
-    if (enabled) {
-      btnMailUi.disabled = false;
-      btnMailUi.classList.add('active');
-    } else {
-      btnMailUi.disabled = true;
-      btnMailUi.classList.remove('active');
-    }
+    btnMailUi.disabled = !enabled;
     await window.api.toggleMail(enabled);
   });
 
@@ -182,15 +208,15 @@
     window.api.quitApp();
   });
 
-  // ---------- Toggle Log (show/hide) ----------
+  // ---------- Toggle Log (show/hide, animasi collapse) ----------
   function toggleLogVisibility() {
     if (logVisible) {
       consoleBox.classList.add('hidden-log');
-      toggleLogBtn.textContent = '▲';
+      toggleLogBtn.classList.add('collapsed');
       logVisible = false;
     } else {
       consoleBox.classList.remove('hidden-log');
-      toggleLogBtn.textContent = '▼';
+      toggleLogBtn.classList.remove('collapsed');
       logVisible = true;
     }
   }
