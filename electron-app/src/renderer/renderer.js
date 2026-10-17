@@ -38,30 +38,86 @@
   // ---------- Helper Log (pengganti redirect stdout) ----------
   // Buffer log: DOM di-flush per animation frame, bukan per baris.
   // Menghindari reflow sinkron & pengulangan scrollHeight pada setiap pesan IPC.
-  const MAX_LOG_CHARS = 100000;        // batas memori console box
+  const MAX_LOG_LINES = 800;           // batas jumlah baris di terminal
   let logBuffer = [];
   let logFlushScheduled = false;
+  let logLineCount = 0;
+  let autoScroll = true;               // pause saat user scroll ke atas
+
+  const logCard = consoleBox.closest('.log-card');
+  const clearLogBtn = $('clear-log');
+  const autoscrollBtn = $('autoscroll-toggle');
+
+  // Klasifikasi pesan → aksen warna baris (konsisten dgn server-manager/main.js)
+  function classifyLog(msg) {
+    if (/error|failed|gagal|traceback|exception/i.test(msg)) return 'error';
+    if (/warn|peringatan/i.test(msg)) return 'warn';
+    if (/✓|berhasil|started|menjalankan|online/i.test(msg)) return 'success';
+    if (/^={3,}|^-{3,}/.test(msg.trim())) return 'dim';
+    return '';
+  }
+
+  function makeLogLine(msg) {
+    const div = document.createElement('div');
+    div.className = 'log-line' + (classifyLog(msg) ? ' ' + classifyLog(msg) : '');
+    div.textContent = msg;
+    return div;
+  }
 
   function flushLog() {
     logFlushScheduled = false;
     if (!logBuffer.length) return;
-    const chunk = logBuffer.join('\n') + '\n';
+    // Satu DocumentFragment → satu reflow per frame
+    const frag = document.createDocumentFragment();
+    for (const line of logBuffer) frag.appendChild(makeLogLine(line));
     logBuffer = [];
-    consoleBox.textContent += chunk;
-    // Pangkas log lama agar tidak boros memori/DOM saat session panjang
-    if (consoleBox.textContent.length > MAX_LOG_CHARS) {
-      consoleBox.textContent = consoleBox.textContent.slice(-MAX_LOG_CHARS);
+    consoleBox.appendChild(frag);
+    // Pangkas dari depan secara O(1) (firstChild), bukan slice string
+    logLineCount += frag.childNodes.length || 0;
+    while (logLineCount > MAX_LOG_LINES && consoleBox.firstChild) {
+      consoleBox.removeChild(consoleBox.firstChild);
+      logLineCount--;
     }
-    consoleBox.scrollTop = consoleBox.scrollHeight;
+    if (autoScroll) consoleBox.scrollTop = consoleBox.scrollHeight;
   }
 
   function print(msg) {
-    logBuffer.push(String(msg));
+    const text = String(msg).replace(/^\s+|\s+$/g, '');
+    if (!text) return;
+    // Satu pesan IPC bisa memuat beberapa baris (batch) → pecah dulu
+    for (const line of text.split(/\r?\n/)) {
+      if (line.trim()) logBuffer.push(line);
+    }
     if (!logFlushScheduled) {
       logFlushScheduled = true;
       requestAnimationFrame(flushLog);
     }
   }
+
+  function clearConsole() {
+    logBuffer = [];
+    logLineCount = 0;
+    consoleBox.replaceChildren(makeLogLine('\u00A0'));
+    logLineCount = 1;
+  }
+
+  // Auto-scroll pause/resume: jangan lompat ke bawah jika user membaca log lama
+  consoleBox.addEventListener('scroll', () => {
+    const atBottom = consoleBox.scrollHeight - consoleBox.scrollTop - consoleBox.clientHeight < 24;
+    if (atBottom !== autoScroll) {
+      autoScroll = atBottom;
+      autoscrollBtn.classList.toggle('off', !autoScroll);
+      autoscrollBtn.title = 'Auto-Scroll: ' + (autoScroll ? 'ON' : 'OFF');
+    }
+  }, { passive: true });
+
+  clearLogBtn.addEventListener('click', clearConsole);
+  autoscrollBtn.addEventListener('click', () => {
+    autoScroll = !autoScroll;
+    autoscrollBtn.classList.toggle('off', !autoScroll);
+    autoscrollBtn.title = 'Auto-Scroll: ' + (autoScroll ? 'ON' : 'OFF');
+    if (autoScroll) consoleBox.scrollTop = consoleBox.scrollHeight;
+  });
 
   // ---------- Animasi Ripple (sentuhan) pada semua tombol ----------
   function attachRipple(el) {
@@ -87,6 +143,8 @@
   function setStatus(text, cls) {
     statusLabel.querySelector('.status-text').textContent = text;
     statusLabel.className = 'status-pill ' + cls;
+    // Indikator "hidup" pada titik terminal saat server online
+    if (logCard) logCard.classList.toggle('running', cls === 'online');
   }
 
   // ---------- Modal Prompt (pengganti CTkInputDialog) ----------
@@ -232,14 +290,16 @@
 
   // ---------- Toggle Log (show/hide, animasi collapse) ----------
   function toggleLogVisibility() {
+    const wrap = consoleBox.closest('.console-wrap');
     if (logVisible) {
-      consoleBox.classList.add('hidden-log');
+      wrap.classList.add('hidden-log');
       toggleLogBtn.classList.add('collapsed');
       logVisible = false;
     } else {
-      consoleBox.classList.remove('hidden-log');
+      wrap.classList.remove('hidden-log');
       toggleLogBtn.classList.remove('collapsed');
       logVisible = true;
+      if (autoScroll) consoleBox.scrollTop = consoleBox.scrollHeight;
     }
   }
   toggleLogBtn.addEventListener('click', toggleLogVisibility);

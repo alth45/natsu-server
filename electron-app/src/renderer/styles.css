@@ -340,8 +340,32 @@ html, body {
 .log-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 8px;
+}
+/* Titik gaya terminal macOS di kiri header */
+.term-dots {
+  display: inline-flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.term-dots i {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.term-dots i:nth-child(1) { background: #f87171; }
+.term-dots i:nth-child(2) { background: #fbbf24; }
+.term-dots i:nth-child(3) { background: #34d399; }
+.log-card.running .term-dots i:nth-child(3) {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
+  animation: dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(52, 211, 153, 0.4); }
+  50%      { box-shadow: 0 0 10px rgba(52, 211, 153, 0.9); }
 }
 .log-title {
   font-size: 12px;
@@ -349,8 +373,15 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 1.2px;
   color: var(--text-muted);
+  flex: 1;
 }
-.toggle-log-btn {
+.log-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.toggle-log-btn, .log-action-btn {
   width: 30px; height: 30px;
   display: grid; place-items: center;
   border-radius: 9px;
@@ -359,47 +390,112 @@ html, body {
   cursor: pointer;
   transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
 }
-.toggle-log-btn svg {
+.toggle-log-btn svg, .log-action-btn svg {
   width: 15px; height: 15px;
   stroke: var(--text-muted);
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
+  stroke-linejoin: round;
   transition: transform 0.3s var(--ease), stroke 0.2s var(--ease);
 }
-.toggle-log-btn:hover { background: var(--accent-soft); border-color: rgba(109,93,246,0.4); }
-.toggle-log-btn:hover svg { stroke: var(--accent-hover); }
+.toggle-log-btn:hover, .log-action-btn:hover {
+  background: var(--accent-soft);
+  border-color: rgba(109,93,246,0.4);
+}
+.toggle-log-btn:hover svg, .log-action-btn:hover svg { stroke: var(--accent-hover); }
+.toggle-log-btn:active svg, .log-action-btn:active svg { transform: scale(0.85); }
 .toggle-log-btn.collapsed svg { transform: rotate(180deg); }
+/* Tombol auto-scroll dalam kondisi nonaktif (user sedang membaca log lama) */
+.log-action-btn.off svg { opacity: 0.4; }
+#autoscroll-toggle.off svg { transform: rotate(180deg); }
 
-.console {
+/* ---- Terminal body: garis samar + prompt bergaya shell ---- */
+.console-wrap {
   flex: 1;
-  background: #0a0d13;
-  color: #9fe8b6;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 11.5px;
-  line-height: 1.55;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  user-select: text;
-  transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease), padding 0.35s var(--ease), margin 0.35s var(--ease);
+  min-height: 0;
+  display: flex;
+  transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease), margin 0.35s var(--ease);
   max-height: 2000px;
   opacity: 1;
 }
-.console.hidden-log {
+.console-wrap.hidden-log {
   max-height: 0;
   opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
   margin-top: -8px;
   overflow: hidden;
 }
+.console {
+  flex: 1;
+  position: relative;
+  background:
+    /* kilau lembut di sudut kanan-atas */
+    radial-gradient(420px 160px at 100% 0%, rgba(109,93,246,0.07), transparent 70%),
+    repeating-linear-gradient(0deg, transparent 0 21px, rgba(255,255,255,0.018) 21px 22px),
+    #070a10;
+  color: #c9f7d4;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 0 12px 14px;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 22px;
+  overflow-y: auto;
+  user-select: text;
+  /* sapuan halus saat kursor berada di area terminal */
+  background-attachment: local;
+}
+/* Baris log: gutter prompt "❯" di kiri via pseudo-element (hemat DOM) */
+.log-line {
+  position: relative;
+  padding-left: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 22px;
+}
+.log-line::before {
+  content: "\276F";            /* ❯ prompt char */
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+.log-line:first-child::before { color: var(--success); }
+/* Perataan warna pesan umum dari server-manager */
+.log-line.error   { color: #ffb3ba; }
+.log-line.error::before   { color: var(--danger); }
+.log-line.warn    { color: #ffe3a3; }
+.log-line.warn::before    { color: var(--warning); }
+.log-line.success { color: #9fe8b6; }
+.log-line.success::before { color: var(--success); }
+.log-line.system  { color: #aab6ff; }
+.log-line.dim     { color: var(--text-muted); }
+.log-line.dim::before     { color: var(--text-muted); }
+/* Kursor blok berkedip di baris terakhir */
+.console::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 20px;
+  vertical-align: middle;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: caret-blink 1.05s steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  0%, 55%  { opacity: 1; }
+  56%,100% { opacity: 0.12; }
+}
 .console::-webkit-scrollbar { width: 8px; }
-.console::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-.console::-webkit-scrollbar-thumb:hover { background: #33405a; }
+.console::-webkit-scrollbar-track { background: transparent; }
+.console::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.console::-webkit-scrollbar-thumb:hover { background: #33405a; background-clip: content-box; }
 
 .footer {
   text-align: right;
