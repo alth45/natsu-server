@@ -15,12 +15,29 @@ let tray = null;
 let isQuitting = false;
 let mailCatcherOn = false;
 
+// Log dikumpulkan (coalescing) lalu dikirim sekali per tick ke renderer.
+// Mengurangi jumlah pesan IPC & reflow saat start-up (banyak baris log sekaligus).
+let pendingLogs = [];
+let logFlushTimer = null;
+const LOG_FLUSH_MS = 50;
+
+function flushLogs() {
+  logFlushTimer = null;
+  if (!pendingLogs.length) return;
+  const batch = pendingLogs.join('\n');
+  pendingLogs = [];
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('log', batch);
+  } else {
+    console.log(batch);
+  }
+}
+
 const server = new ServerManager((msg) => {
   // Redirect semua log backend ke terminal log di renderer
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('log', String(msg));
-  } else {
-    console.log(String(msg));
+  pendingLogs.push(String(msg));
+  if (logFlushTimer === null) {
+    logFlushTimer = setTimeout(flushLogs, LOG_FLUSH_MS);
   }
 });
 

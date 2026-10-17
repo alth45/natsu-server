@@ -36,9 +36,31 @@
   const modalCancel = $('modal-cancel');
 
   // ---------- Helper Log (pengganti redirect stdout) ----------
-  function print(msg) {
-    consoleBox.textContent += String(msg) + '\n';
+  // Buffer log: DOM di-flush per animation frame, bukan per baris.
+  // Menghindari reflow sinkron & pengulangan scrollHeight pada setiap pesan IPC.
+  const MAX_LOG_CHARS = 100000;        // batas memori console box
+  let logBuffer = [];
+  let logFlushScheduled = false;
+
+  function flushLog() {
+    logFlushScheduled = false;
+    if (!logBuffer.length) return;
+    const chunk = logBuffer.join('\n') + '\n';
+    logBuffer = [];
+    consoleBox.textContent += chunk;
+    // Pangkas log lama agar tidak boros memori/DOM saat session panjang
+    if (consoleBox.textContent.length > MAX_LOG_CHARS) {
+      consoleBox.textContent = consoleBox.textContent.slice(-MAX_LOG_CHARS);
+    }
     consoleBox.scrollTop = consoleBox.scrollHeight;
+  }
+
+  function print(msg) {
+    logBuffer.push(String(msg));
+    if (!logFlushScheduled) {
+      logFlushScheduled = true;
+      requestAnimationFrame(flushLog);
+    }
   }
 
   // ---------- Animasi Ripple (sentuhan) pada semua tombol ----------

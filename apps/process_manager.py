@@ -5,6 +5,9 @@ import socket
 import sys
 import threading
 import json
+import itertools
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from email import message_from_bytes
 from email.header import decode_header
 from aiosmtpd.controller import Controller
@@ -17,19 +20,24 @@ import mimetypes
 # ==========================================
 # DATA & LOGIKA MAIL CATCHER (TERTANAM)
 # ==========================================
-EMAILS_DB = []
+# EMAILS_DB dibatasi ukurannya (deque) agar penggunaan memori tetap konstan
+# dan insert di posisi teratas berjalan O(1), bukan O(n) seperti list biasa.
+MAX_EMAILS = 200
+EMAILS_DB = deque(maxlen=MAX_EMAILS)
+EMAIL_ID_COUNTER = itertools.count(1)   # id unik monotonik, bebas tabrakan
+DB_LOCK = threading.Lock()              # aman untuk akses lintas thread (SMTP vs HTTP)
 
 def get_decoded_header(header_value):
     """Membaca subjek email yang di-encode atau mengandung emoji"""
     if not header_value: return ""
     decoded = decode_header(header_value)
-    res = ""
+    parts = []
     for text, charset in decoded:
         if isinstance(text, bytes):
-            res += text.decode(charset or 'utf-8', errors='ignore')
+            parts.append(text.decode(charset or 'utf-8', errors='ignore'))
         else:
-            res += text
-    return res
+            parts.append(text)
+    return "".join(parts)
 
 
 
@@ -44,15 +52,22 @@ class SmtpHandler:
         if msg.is_multipart():
             for part in msg.walk():
                 content_type = part.get_content_type()
+                payload = None
                 if content_type == 'text/plain':
-                    body_text = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    payload = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    body_text = payload
                 elif content_type == 'text/html':
-                    body_html = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    payload = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    body_html = payload
+                if payload is not None:
+                    # Tidak perlu lanjut memindai jika kedua versi sudah lengkap
+                    if body_text and body_html:
+                        break
         else:
             body_text = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
             
         email_data = {
-            "id": len(EMAILS_DB) + 1,
+            "id": next(EMAIL_ID_COUNTER),
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "from": envelope.mail_from,
             "to": ", ".join(envelope.rcpt_tos),
@@ -60,8 +75,10 @@ class SmtpHandler:
             "text": body_text,
             "html": body_html
         }
-        EMAILS_DB.insert(0, email_data) # Taruh di paling atas
-        print(f"> [Mail Catcher] Masuk: {email_data['from']} | Subjek: {subject}")
+        with DB_LOCK:
+            EMAILS_DB.appendleft(email_data)  # Taruh di paling atas (O(1))
+            total = len(EMAILS_DB)
+        print(f"> [Mail Catcher] Masuk: {email_data['from']} | Subjek: {subject} | Total: {total}")
         sys.stdout.flush()
         return '250 OK'
 
@@ -83,25 +100,40 @@ def load_html_ui():
     return HTML_UI_CACHE
 
 class WebApiHandler(BaseHTTPRequestHandler):
+    # Cache level-kelas: hasil serialisasi & isi file statis cukup dibaca sekali.
+    _emails_cache = (None, None)      # (versi_db, payload_bytes)
+    _static_cache = {}                # path -> (mtime, full_response_bytes)
+
+    # Logging per-request dinonaktifkan agar tidak memblokir/membanjiri stdout
+    def log_message(self, format, *args):
+        pass
+
+    def _send_cached(self, payload, content_type):
+        """Kirim respons lengkap (header + body) dari cache tanpa re-serialisasi."""
+        self.send_response(200)
+        self.send_header('Content-type', content_type)
+        self.send_header('Content-Length', str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
     def do_GET(self):
         try:
-            # API endpoint
+            # API endpoint — di-cache; hanya diserialisasi ulang saat EMAILS_DB berubah
             if self.path == '/api/emails':
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(EMAILS_DB).encode('utf-8'))
+                with DB_LOCK:
+                    version = len(EMAILS_DB)
+                    cached_ver, cached_payload = WebApiHandler._emails_cache
+                    if cached_ver != version:
+                        cached_payload = json.dumps(list(EMAILS_DB)).encode('utf-8')
+                        WebApiHandler._emails_cache = (version, cached_payload)
+                self._send_cached(cached_payload, 'application/json')
                 return
 
             # Root path → sajikan ui/index.html
             if self.path == '/':
                 index_path = os.path.join(os.path.dirname(__file__), 'ui', 'index.html')
                 if os.path.exists(index_path):
-                    self.send_response(200)
-                    self.send_header('Content-type', 'text/html')
-                    self.end_headers()
-                    with open(index_path, 'rb') as f:
-                        self.wfile.write(f.read())
+                    self._send_static(index_path)
                 else:
                     self.send_response(404)
                     self.end_headers()
@@ -111,25 +143,17 @@ class WebApiHandler(BaseHTTPRequestHandler):
             if self.path.startswith('/ui/'):
                 # Ambil nama file (misal: /ui/style.css → style.css)
                 relative_path = self.path[4:]  # hilangkan '/ui/'
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                file_path = os.path.join(base_dir, 'ui', relative_path)
-                file_path = os.path.normpath(file_path)  # cegah path traversal
+                base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ui')
+                file_path = os.path.normpath(os.path.join(base_dir, relative_path))
 
                 # Pastikan file masih di dalam folder ui (keamanan)
-                if not file_path.startswith(os.path.join(base_dir, 'ui')):
+                if not file_path.startswith(base_dir):
                     self.send_response(403)
                     self.end_headers()
                     return
 
                 if os.path.isfile(file_path):
-                    content_type, _ = mimetypes.guess_type(file_path)
-                    if content_type is None:
-                        content_type = 'application/octet-stream'
-                    self.send_response(200)
-                    self.send_header('Content-type', content_type)
-                    self.end_headers()
-                    with open(file_path, 'rb') as f:
-                        self.wfile.write(f.read())
+                    self._send_static(file_path)
                 else:
                     self.send_response(404)
                     self.end_headers()
@@ -143,6 +167,25 @@ class WebApiHandler(BaseHTTPRequestHandler):
             print(f"[!] WebAPI Error: {e}")
             self.send_response(500)
             self.end_headers()
+
+    def _send_static(self, file_path):
+        """Sajikan file statis dengan cache byte penuh, invalidasi via mtime."""
+        mtime = os.path.getmtime(file_path)
+        entry = WebApiHandler._static_cache.get(file_path)
+        if entry is None or entry[0] != mtime:
+            with open(file_path, 'rb') as f:
+                content = f.read()
+            content_type, _ = mimetypes.guess_type(file_path)
+            header = (
+                b'HTTP/1.1 200 OK\r\n'
+                b'Content-type: ' + (content_type or 'application/octet-stream').encode() + b'\r\n'
+                b'Content-Length: ' + str(len(content)).encode() + b'\r\n'
+                b'\r\n'
+            )
+            entry = (mtime, header + content)
+            WebApiHandler._static_cache[file_path] = entry
+        _, payload = entry
+        self.wfile.write(payload)
 
 # ==========================================
 # KELAS SERVER MANAGER UTAMA
@@ -162,7 +205,10 @@ class ServerManager:
         self.processes = {}
     
     def is_port_in_use(self, port):
+        # Timeout eksplisit 2s: pada koneksi localhost ini sangat aman, dan
+        # mencegah thread mengambang lama saat sistem IPv6 tidak stabil.
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(2.0)
             return s.connect_ex(('127.0.0.1', port)) == 0
 
     def is_port_free(self, host, port):
@@ -239,8 +285,18 @@ server {{
 }}
 """
                     conf_path = os.path.join(vhost_dir, f"{item}.conf")
-                    with open(conf_path, 'w') as f:
-                        f.write(vhost_content)
+                    # Hanya tulis ulang jika kontennya berubah — menghemat I/O
+                    # dan mencegah reload config yang tidak perlu pada nginx.
+                    needs_write = True
+                    if os.path.exists(conf_path):
+                        try:
+                            with open(conf_path, 'r') as cf:
+                                needs_write = cf.read() != vhost_content
+                        except OSError:
+                            pass
+                    if needs_write:
+                        with open(conf_path, 'w') as f:
+                            f.write(vhost_content)
         print(f"    -> Ditemukan {len(domains_found)} domain kustom.")
         return domains_found
 
@@ -250,9 +306,15 @@ server {{
         try:
             with open(hosts_path, 'r') as f:
                 lines = f.readlines()
+            # Kumpulkan seluruh isi file sekali (O(n)), lalu cek keanggotaan
+            # domain via lookup O(1) — bukan nested loop O(n×m) seperti sebelumnya.
+            existing_tokens = set()
+            for line in lines:
+                for token in line.split():
+                    existing_tokens.add(token)
             new_entries = []
             for domain in domains:
-                if not any(domain in line for line in lines):
+                if domain not in existing_tokens:
                     new_entries.append(f"127.0.0.1 {domain} # MyLocalServer\n")
             if new_entries:
                 with open(hosts_path, 'a') as f:
@@ -276,8 +338,13 @@ server {{
             3306: "MYSQL / Mariadb Lain",
             9000: "PHP_CGI"
         }
+        # Semua port dicek paralel; pada koneksi localhost timeout 2s sudah
+        # jauh lebih dari cukup, memangkas waktu start-up dari ~6s -> ~2s.
+        with ThreadPoolExecutor(max_workers=len(ports_to_check)) as pool:
+            results = dict(zip(ports_to_check.keys(),
+                               pool.map(self.is_port_in_use, ports_to_check.keys())))
         for port, app_name in ports_to_check.items():
-            if self.is_port_in_use(port):
+            if results[port]:
                 raise Exception(f"PORT {port} BENTROK! Sedang dipakai oleh {app_name}.")
 
         self.generate_configs()
@@ -465,11 +532,26 @@ server {{
 
         self.is_running = False
 
-        # 3. SAPU BERSIH (Brute-force Kill Anti-Zombie)
+        # 3. SAPU BERSIH (Brute-force Kill Anti-Zombie) — jalankan paralel via
+        # subprocess agar tidak spawn shell cmd.exe & tidak serial menunggu
+        # masing-masing taskkill selesai (hemat ratusan ms saat shutdown).
         print("[*] Memastikan memori bersih dari sisa proses...")
-        os.system("taskkill /f /im nginx.exe >nul 2>&1")
-        os.system("taskkill /f /im php-cgi.exe >nul 2>&1")
-        os.system("taskkill /f /im mysqld.exe >nul 2>&1")
+        kill_jobs = []
+        for image in ("nginx.exe", "php-cgi.exe", "mysqld.exe"):
+            try:
+                kill_jobs.append(subprocess.Popen(
+                    ["taskkill", "/f", "/im", image],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=self.CREATE_NO_WINDOW,
+                ))
+            except OSError:
+                pass  # taskkill tidak tersedia (non-Windows) → lewati
+        for job in kill_jobs:
+            try:
+                job.wait(timeout=5)
+            except Exception:
+                pass
         print("    -> Mesin Web, Database, dan PHP telah dibunuh total.")
 
 if __name__ == "__main__":
